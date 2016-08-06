@@ -32,5 +32,5 @@ with sess.as_default():
                 gd += 1
             z = z + 1
 
-        print ("SNR",snr[s],"ACC",gd/z)
+        print ("SNR",SNR[s],"ACC",gd/z)
 
