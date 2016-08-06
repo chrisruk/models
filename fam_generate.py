@@ -1,4 +1,8 @@
 #!/usr/bin/env python2
+
+## @file
+#  FAM generate file
+
 from __future__ import division, print_function, absolute_import
 
 from gnuradio import filter
@@ -205,7 +209,7 @@ class fam_generate(gr.top_block):
         self.connect((self.blocks_stream_to_vector_0, 0),
                      (self.blocks_probe_signal_vx_0, 0))
 
-
+## Invokes flow graph and returns FAM data
 def process(train, m, sn, z, qu):
 
     if train:
@@ -241,7 +245,7 @@ def process(train, m, sn, z, qu):
 
     qu.put((inp, out))
 
-
+## Generate training data using multiple flow graphs running simultaneously
 def getdata(sn, train=False):
     mcount = 0
 
@@ -285,7 +289,7 @@ def getdata(sn, train=False):
 
     return np.array(inp), np.array(out)
 
-
+## Generate CNN from training data
 def cnn(train_i, train_o, test_i, test_o):
     sess = tf.Session()
 
