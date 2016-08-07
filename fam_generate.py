@@ -1,6 +1,6 @@
 #!/usr/bin/env python2
 
-## @file
+# @file
 #  FAM generate file
 
 from __future__ import division, print_function, absolute_import
@@ -31,7 +31,9 @@ L = 2
 
 np.set_printoptions(threshold=np.nan)
 
-## Handles flowgraph for FAM
+# Handles flowgraph for FAM
+
+
 class fam_generate(gr.top_block):
 
     def __init__(self, modulation, sn, sym):
@@ -39,7 +41,7 @@ class fam_generate(gr.top_block):
         self.samp_rate = samp_rate = 100e3
         gr.top_block.__init__(self)
 
-        create_blocks(self,modulation,sym,sn)
+        create_blocks(self, modulation, sym, sn)
 
         self.blocks_add_xx_1 = blocks.add_vcc(1)
         self.specest_cyclo_fam_1 = specest.cyclo_fam(Np, P, L)
@@ -52,8 +54,8 @@ class fam_generate(gr.top_block):
         self.blocks_null_sink_0 = blocks.null_sink(gr.sizeof_float * 1)
         self.analog_noise_source_x_0 = analog.noise_source_c(
             analog.GR_GAUSSIAN, SNRV[sn][1], 0)
-        self.analog_random_source_x_0 = blocks.vector_source_b(map(int,
-                                                                   np.random.randint(0, 256, 2000000)), False)
+        self.analog_random_source_x_0 = blocks.vector_source_b(
+            map(int, np.random.randint(0, 256, 2000000)), False)
         self.msgq_out = blocks_message_sink_0_msgq_out = gr.msg_queue(1)
         self.blocks_message_sink_0 = blocks.message_sink(
             gr.sizeof_float * 2 * Np, blocks_message_sink_0_msgq_out, False)
@@ -95,8 +97,10 @@ class fam_generate(gr.top_block):
         self.connect((self.blocks_stream_to_vector_0, 0),
                      (self.blocks_probe_signal_vx_0, 0))
 
-## Invokes flow graph and returns FAM data
-def process(train, m, sn, z, qu,sym):
+# Invokes flow graph and returns FAM data
+
+
+def process(train, m, sn, z, qu, sym):
 
     if train:
         inp = []
@@ -113,7 +117,7 @@ def process(train, m, sn, z, qu,sym):
 
     while True:
         floats = tb.blocks_probe_signal_vx_0.level()
-    
+
         if np.sum(floats) == 0:
             print("Found empty FAM")
             continue
@@ -136,7 +140,9 @@ def process(train, m, sn, z, qu,sym):
 
     qu.put((inp, out))
 
-## Generate CNN from training data
+# Generate CNN from training data
+
+
 def fam(train_i, train_o, test_i, test_o):
     sess = tf.Session()
 
@@ -215,11 +221,7 @@ def fam(train_i, train_o, test_i, test_o):
         default_graph_signature=signature)
     model_exporter.export(export_path, tf.constant(export_version), sess)
 
-
-load = False
-
 if __name__ == '__main__':
-    test_i, test_o = getdata(range(9),[8,16],process)
-    train_i, train_o = getdata(range(9),[8,16],process,True)
-
+    test_i, test_o = getdata(range(9), [8, 16], process)
+    train_i, train_o = getdata(range(9), [8, 16], process, True)
     fam(train_i, train_o, test_i, test_o)

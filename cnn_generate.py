@@ -1,6 +1,6 @@
 #!/usr/bin/env python2
 
-## @file
+# @file
 #  CNN generate file
 
 from __future__ import division, print_function, absolute_import
@@ -32,15 +32,17 @@ from data_generate import *
 
 np.set_printoptions(threshold=np.nan)
 
-## Handles flow graph for CNN
+# Handles flow graph for CNN
+
+
 class cnn_generate(gr.top_block):
 
     def __init__(self, modulation, sn, sym):
-    
+
         self.samp_rate = samp_rate = 100e3
         gr.top_block.__init__(self)
 
-        create_blocks(self,modulation,sym,sn)
+        create_blocks(self, modulation, sym, sn)
 
         self.blocks_add_xx_1 = blocks.add_vcc(1)
         self.blocks_multiply_const_vxx_3 = blocks.multiply_const_vcc(
@@ -52,19 +54,19 @@ class cnn_generate(gr.top_block):
         self.blocks_null_sink_0 = blocks.null_sink(gr.sizeof_float * 1)
         self.analog_noise_source_x_0 = analog.noise_source_c(
             analog.GR_GAUSSIAN, SNRV[sn][1], 0)
-        self.analog_random_source_x_0 = blocks.vector_source_b(map(int,
-                                                                   np.random.randint(0, 256, 2000000)), False)
+        self.analog_random_source_x_0 = blocks.vector_source_b(
+            map(int, np.random.randint(0, 256, 2000000)), False)
         self.blocks_stream_to_vector_0 = blocks.stream_to_vector(
-            gr.sizeof_gr_complex  * 1,128)
+            gr.sizeof_gr_complex * 1, 128)
         self.blocks_probe_signal_vx_0 = blocks.probe_signal_vc(128)
-        
+
         if not channel_model:
 
             self.connect((self.analog_noise_source_x_0, 0),
-                     (self.blocks_add_xx_1, 1))
+                         (self.blocks_add_xx_1, 1))
             self.connect((self.blocks_multiply_const_vxx_3, 0),
-                     (self.blocks_add_xx_1, 0))
-            
+                         (self.blocks_add_xx_1, 0))
+
         if modulation == "wbfm":
             self.connect((self.blocks_wavfile_source_0, 0),
                          (self.analog_wfm_tx_0, 0))
@@ -86,21 +88,23 @@ class cnn_generate(gr.top_block):
                      (self.blocks_multiply_const_vxx_3, 0))
 
         if not channel_model:
-            
-            self.connect((self.blocks_add_xx_1, 0), (self.blocks_stream_to_vector_0, 0))
+
+            self.connect((self.blocks_add_xx_1, 0),
+                         (self.blocks_stream_to_vector_0, 0))
         else:
 
             self.connect((self.blocks_multiply_const_vxx_3, 0),
-                     (self.channels_channel_model_0 , 0))
-            self.connect((self.channels_channel_model_0 , 0),
-                    (self.blocks_stream_to_vector_0, 0))
-
+                         (self.channels_channel_model_0, 0))
+            self.connect((self.channels_channel_model_0, 0),
+                         (self.blocks_stream_to_vector_0, 0))
 
         self.connect((self.blocks_stream_to_vector_0, 0),
                      (self.blocks_probe_signal_vx_0, 0))
 
-## Invokes flow graph and returns 128 blocks of samples for the CNN
-def process(train, m, sn, z, qu,sym):
+# Invokes flow graph and returns 128 blocks of samples for the CNN
+
+
+def process(train, m, sn, z, qu, sym):
 
     if train:
         inp = []
@@ -116,7 +120,7 @@ def process(train, m, sn, z, qu,sym):
     count = 0
 
     while True:
-        o = [[],[]]
+        o = [[], []]
 
         floats = tb.blocks_probe_signal_vx_0.level()
         for v in floats:
@@ -138,16 +142,18 @@ def process(train, m, sn, z, qu,sym):
 
     qu.put((inp, out))
 
-## Generate CNN from training data
+# Generate CNN from training data
+
+
 def cnn(train_i, train_o, test_i, test_o):
     print("About to train")
 
     sess = tf.Session()
     K.set_session(sess)
     K.set_learning_phase(1)
-   
+
     print("Created session")
-    
+
     batch_size = 1024
     nb_classes = len(MOD)
     nb_epoch = 2
@@ -190,22 +196,32 @@ def cnn(train_i, train_o, test_i, test_o):
         rotation_range=0,
         width_shift_range=0.2,
         height_shift_range=0.2,
-        zoom_range=[0,1.3],
+        zoom_range=[0, 1.3],
         horizontal_flip=True)
 
     datagen.fit(X_train)
 
-    model.fit_generator(datagen.flow(X_train, Y_train, batch_size=1024,shuffle=True),
-                    samples_per_epoch=len(X_train), nb_epoch=5,verbose=1,validation_data=(test_i[0], test_o[0]))
+    model.fit_generator(
+        datagen.flow(
+            X_train,
+            Y_train,
+            batch_size=1024,
+            shuffle=True),
+        samples_per_epoch=len(X_train),
+        nb_epoch=5,
+        verbose=1,
+        validation_data=(
+            test_i[0],
+            test_o[0]))
 
-    #model.fit(X_train, Y_train, batch_size=batch_size, nb_epoch=nb_epoch,
+    # model.fit(X_train, Y_train, batch_size=batch_size, nb_epoch=nb_epoch,
     #          verbose=1,shuffle=True, validation_data=(test_i[0], test_o[0]))
 
     for s in range(len(test_i)):
         X_test = test_i[s]
         Y_test = test_o[s]
         score = model.evaluate(X_test, Y_test, verbose=0)
-        print("SNR",SNR[s],"Test accuracy:", score[1])
+        print("SNR", SNR[s], "Test accuracy:", score[1])
 
     K.set_learning_phase(0)
     config = model.get_config()
@@ -226,11 +242,7 @@ def cnn(train_i, train_o, test_i, test_o):
         default_graph_signature=signature)
     model_exporter.export(export_path, tf.constant(export_version), sess)
 
-
-load = False
-
 if __name__ == '__main__':
-    test_i, test_o = getdata(range(9),[8,16],process)
-    train_i, train_o = getdata(range(9),[8,16],process,True)
-        
+    test_i, test_o = getdata(range(9), [8, 16], process)
+    train_i, train_o = getdata(range(9), [8, 16], process, True)
     cnn(train_i, train_o, test_i, test_o)

@@ -28,8 +28,10 @@ SNRV = [
 
 MOD = ["fsk", "qam16", "qam64", "2psk", "4psk", "8psk", "gmsk", "wbfm", "nfm"]
 
-## Generate training data using multiple flow graphs running simultaneously
-def getdata(sn,syms,process,train=False):
+# Generate training data using multiple flow graphs running simultaneously
+
+
+def getdata(sn, syms, process, train=False):
     mcount = 0
 
     if train:
@@ -52,7 +54,7 @@ def getdata(sn,syms,process,train=False):
         plist = []
         for s in sn:
             for sy in syms:
-                p = Process(target=process, args=(train, m, s, z, q,sy))
+                p = Process(target=process, args=(train, m, s, z, q, sy))
                 plist.append(p)
                 p.start()
 
@@ -76,8 +78,7 @@ def getdata(sn,syms,process,train=False):
     return np.array(inp), np.array(out)
 
 
-
-def create_blocks(self,modulation,sym,sn):
+def create_blocks(self, modulation, sym, sn):
     self.rational_resampler_xxx_0 = filter.rational_resampler_ccc(
         interpolation=1,
         decimation=1,
@@ -107,51 +108,52 @@ def create_blocks(self,modulation,sym,sn):
         )
     elif modulation == "8psk":
         self.digital_mod = digital.psk.psk_mod(
-                constellation_points=8,
-                mod_code="gray",
-                differential=True,
-                samples_per_symbol=sym,
-                excess_bw=0.35,
-                verbose=False,
-                log=False,
+            constellation_points=8,
+            mod_code="gray",
+            differential=True,
+            samples_per_symbol=sym,
+            excess_bw=0.35,
+            verbose=False,
+            log=False,
         )
     elif modulation == "fsk":
         self.digital_mod = digital.gfsk_mod(
-                samples_per_symbol=sym,
-                sensitivity=1.0,
-                bt=0.35,
-                verbose=False,
-                log=False,
+            samples_per_symbol=sym,
+            sensitivity=1.0,
+            bt=0.35,
+            verbose=False,
+            log=False,
         )
     elif modulation == "qam16":
         self.digital_mod = digital.qam.qam_mod(
-                constellation_points=16,
-                mod_code="gray",
-                differential=True,
-                samples_per_symbol=sym,
-                excess_bw=0.35,
-                verbose=False,
-                log=False,
+            constellation_points=16,
+            mod_code="gray",
+            differential=True,
+            samples_per_symbol=sym,
+            excess_bw=0.35,
+            verbose=False,
+            log=False,
         )
     elif modulation == "qam64":
         self.digital_mod = digital.qam.qam_mod(
-                constellation_points=64,
-                mod_code="gray",
-                differential=True,
-                samples_per_symbol=sym,
-                excess_bw=0.35,
-                verbose=False,
-                log=False,
+            constellation_points=64,
+            mod_code="gray",
+            differential=True,
+            samples_per_symbol=sym,
+            excess_bw=0.35,
+            verbose=False,
+            log=False,
         )
     elif modulation == "gmsk":
         self.digital_mod = digital.gmsk_mod(
-                samples_per_symbol=sym,
-                bt=0.35,
-                verbose=False,
-                log=False,
+            samples_per_symbol=sym,
+            bt=0.35,
+            verbose=False,
+            log=False,
         )
 
-    self.blocks_wavfile_source_0 = blocks.wavfile_source("/home/chris/Desktop/music.wav", False)
+    self.blocks_wavfile_source_0 = blocks.wavfile_source(
+        "/home/chris/Desktop/music.wav", False)
 
     self.analog_wfm_tx_0 = analog.wfm_tx(
         audio_rate=44100,
