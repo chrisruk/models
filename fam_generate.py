@@ -1,24 +1,19 @@
 #!/usr/bin/env python2
 
-# @file
+## @file
 #  FAM generate file
 
 from __future__ import division, print_function, absolute_import
 
-from numpy import zeros, newaxis
-import threading
-import struct
 import numpy as np
 import tensorflow as tf
 import specest
 import time
 
-from keras.datasets import mnist
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Activation, Flatten
 from keras.layers import Convolution2D, MaxPooling2D
 from keras.utils import np_utils
-from keras.models import model_from_config
 from keras import backend as K
 
 from tensorflow.contrib.session_bundle import exporter
@@ -31,17 +26,15 @@ L = 2
 
 np.set_printoptions(threshold=np.nan)
 
-# Handles flowgraph for FAM
-
-
+## Handles flowgraph for FAM
 class fam_generate(gr.top_block):
 
-    def __init__(self, modulation, sn, sym):
+    def __init__(self, modulation, sn, sym, train):
 
         self.samp_rate = samp_rate = 100e3
         gr.top_block.__init__(self)
 
-        create_blocks(self, modulation, sym, sn)
+        create_blocks(self, modulation, sym, sn, train)
 
         self.blocks_add_xx_1 = blocks.add_vcc(1)
         self.specest_cyclo_fam_1 = specest.cyclo_fam(Np, P, L)
@@ -97,10 +90,8 @@ class fam_generate(gr.top_block):
         self.connect((self.blocks_stream_to_vector_0, 0),
                      (self.blocks_probe_signal_vx_0, 0))
 
-# Invokes flow graph and returns FAM data
-
-
-def process(train, m, sn, z, qu, sym):
+## Invokes flow graph and returns FAM data
+def process(train, m, sn, z, qu, sym,trainv):
 
     if train:
         inp = []
@@ -109,7 +100,7 @@ def process(train, m, sn, z, qu, sym):
         inp = [[] for k in range(0, len(SNR))]
         out = [[] for k in range(0, len(SNR))]
 
-    tb = fam_generate(m, sn, sym)
+    tb = fam_generate(m, sn, sym,trainv)
     tb.start()
 
     time.sleep(3)
@@ -132,7 +123,7 @@ def process(train, m, sn, z, qu, sym):
             inp[sn].append(np.array([floats]))
             out[sn].append(np.array(z))
 
-        if count > 30:
+        if count > 20:
             tb.stop()
             break
 
@@ -140,9 +131,7 @@ def process(train, m, sn, z, qu, sym):
 
     qu.put((inp, out))
 
-# Generate CNN from training data
-
-
+## Generate CNN from training data
 def fam(train_i, train_o, test_i, test_o):
     sess = tf.Session()
 
@@ -196,11 +185,14 @@ def fam(train_i, train_o, test_i, test_o):
                   metrics=['accuracy'])
 
     model.fit(X_train, Y_train, batch_size=batch_size, nb_epoch=nb_epoch,
-              verbose=1)  # validation_data=(X_test, Y_test))
+              verbose=1, validation_data=(test_i[0], test_o[0]))
 
-    score = model.evaluate(X_test, Y_test, verbose=0)
-    print('Test score:', score[0])
-    print('Test accuracy:', score[1])
+
+    for s in range(len(test_i)):
+        X_test = test_i[s]
+        Y_test = test_o[s]
+        score = model.evaluate(X_test, Y_test, verbose=0)
+        print("SNR", SNR[s], "Test accuracy:", score[1])
 
     K.set_learning_phase(0)
     config = model.get_config()

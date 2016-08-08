@@ -1,30 +1,21 @@
 #!/usr/bin/env python2
 
-# @file
+## @file
 #  CNN generate file
 
 from __future__ import division, print_function, absolute_import
 
-from numpy import zeros, newaxis
-import threading
-import struct
 import numpy as np
 import tensorflow as tf
-import specest
 import time
-
-from multiprocessing import Process, Queue
 
 np.random.seed(1337)  # for reproducibility
 
-from keras.datasets import mnist
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Activation, Flatten
-from keras.layers import Convolution2D, MaxPooling2D
-from keras.utils import np_utils
-from keras.models import model_from_config
+from keras.layers import Convolution2D
 from keras import backend as K
-from keras.preprocessing.image import *
+from keras.preprocessing.image import ImageDataGenerator
 
 from tensorflow.contrib.session_bundle import exporter
 
@@ -32,17 +23,15 @@ from data_generate import *
 
 np.set_printoptions(threshold=np.nan)
 
-# Handles flow graph for CNN
-
-
+## Handles flow graph for CNN
 class cnn_generate(gr.top_block):
 
-    def __init__(self, modulation, sn, sym):
+    def __init__(self, modulation, sn, sym, train):
 
         self.samp_rate = samp_rate = 100e3
         gr.top_block.__init__(self)
 
-        create_blocks(self, modulation, sym, sn)
+        create_blocks(self, modulation, sym, sn, train)
 
         self.blocks_add_xx_1 = blocks.add_vcc(1)
         self.blocks_multiply_const_vxx_3 = blocks.multiply_const_vcc(
@@ -101,10 +90,8 @@ class cnn_generate(gr.top_block):
         self.connect((self.blocks_stream_to_vector_0, 0),
                      (self.blocks_probe_signal_vx_0, 0))
 
-# Invokes flow graph and returns 128 blocks of samples for the CNN
-
-
-def process(train, m, sn, z, qu, sym):
+## Invokes flow graph and returns 128 blocks of samples for the CNN
+def process(train, m, sn, z, qu, sym, trainv):
 
     if train:
         inp = []
@@ -113,7 +100,7 @@ def process(train, m, sn, z, qu, sym):
         inp = [[] for k in range(0, len(SNR))]
         out = [[] for k in range(0, len(SNR))]
 
-    tb = cnn_generate(m, sn, sym)
+    tb = cnn_generate(m, sn, sym, trainv)
     tb.start()
 
     time.sleep(1)
@@ -142,9 +129,7 @@ def process(train, m, sn, z, qu, sym):
 
     qu.put((inp, out))
 
-# Generate CNN from training data
-
-
+## Generate CNN from training data
 def cnn(train_i, train_o, test_i, test_o):
     print("About to train")
 
@@ -154,9 +139,7 @@ def cnn(train_i, train_o, test_i, test_o):
 
     print("Created session")
 
-    batch_size = 1024
     nb_classes = len(MOD)
-    nb_epoch = 2
 
     X_train = train_i
     Y_train = train_o

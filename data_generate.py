@@ -1,4 +1,9 @@
+
+## @file
+#  Creates part of flow graph
+
 from __future__ import division, print_function, absolute_import
+from multiprocessing import Process, Queue
 import numpy as np
 from gnuradio import filter
 from gnuradio import gr
@@ -7,30 +12,29 @@ from gnuradio import digital
 from gnuradio import blocks
 from gnuradio import channels
 
-
-from multiprocessing import Process, Queue
-
 np.random.seed(1337)  # for reproducibility
 
+## Whether to use channel model or not
 channel_model = False
-SNR = ["20", "15", "10", "5", "0", "-5", "-10", "-15", "-20"]
-SNRV = [
-    [
-        1, 0.32], [
-            1, 0.435], [
-                1, 0.56], [
-                    1, 0.75], [
-                        1, 1], [
-                            0.75, 1], [
-                                0.56, 1], [
-                                    0.435, 1], [
-                                        0.32, 1]]
 
+## String list of SNRs
+SNR = ["20", "15", "10", "5", "0", "-5", "-10", "-15", "-20"]
+
+## Amplitude of signal and noise, to create SNRs
+SNRV = [[1, 0.32], 
+        [1, 0.435], 
+        [1, 0.56],
+        [1, 0.75], 
+        [1, 1], 
+        [0.75, 1], 
+        [0.56, 1], 
+        [0.435, 1], 
+        [0.32, 1]]
+
+## List of modulation schemes to use
 MOD = ["fsk", "qam16", "qam64", "2psk", "4psk", "8psk", "gmsk", "wbfm", "nfm"]
 
-# Generate training data using multiple flow graphs running simultaneously
-
-
+## Generate training data using multiple flow graphs running simultaneously
 def getdata(sn, syms, process, train=False):
     mcount = 0
 
@@ -54,7 +58,7 @@ def getdata(sn, syms, process, train=False):
         plist = []
         for s in sn:
             for sy in syms:
-                p = Process(target=process, args=(train, m, s, z, q, sy))
+                p = Process(target=process, args=(train, m, s, z, q, sy, train))
                 plist.append(p)
                 p.start()
 
@@ -77,8 +81,8 @@ def getdata(sn, syms, process, train=False):
 
     return np.array(inp), np.array(out)
 
-
-def create_blocks(self, modulation, sym, sn):
+## Initialise blocks for flow graph
+def create_blocks(self, modulation, sym, sn, train):
     self.rational_resampler_xxx_0 = filter.rational_resampler_ccc(
         interpolation=1,
         decimation=1,
@@ -152,8 +156,12 @@ def create_blocks(self, modulation, sym, sn):
             log=False,
         )
 
-    self.blocks_wavfile_source_0 = blocks.wavfile_source(
-        "/home/chris/Desktop/music.wav", False)
+    if train:
+        self.blocks_wavfile_source_0 = blocks.wavfile_source(
+            "music.wav", False)
+    else:
+        self.blocks_wavfile_source_0 = blocks.wavfile_source(
+            "music2.wav", False)
 
     self.analog_wfm_tx_0 = analog.wfm_tx(
         audio_rate=44100,
