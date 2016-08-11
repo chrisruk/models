@@ -197,16 +197,16 @@ def cnn(train_i, train_o, test_i, test_o):
 
     print("Image generator, train",len(X_train))
    
-    datagen = ImageDataGenerator(
-        featurewise_center=False,
-        featurewise_std_normalization=False,
-        rotation_range=0,
-        width_shift_range=0.3,
-        height_shift_range=0.3,
-        zoom_range=[0,1.3],
-        shear_range=0.2,
-        horizontal_flip=True,
-        vertical_flip=True)
+    datagen = ImageDataGenerator()
+        #featurewise_center=False,
+        #featurewise_std_normalization=False,
+        #rotation_range=0,
+        #width_shift_range=0.3,
+        #height_shift_range=0.3,
+        #zoom_range=[0,1.3],
+        #shear_range=0.2,
+        #horizontal_flip=True,
+        #vertical_flip=True)
 
     datagen.fit(X_train)
 

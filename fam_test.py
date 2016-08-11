@@ -10,11 +10,11 @@ from fam_generate import *
 
 ## Load TensorFlow serving session from file
 def load_from_file():
-    sess, meta_graph_def = session_bundle.LoadSessionBundleFromPath("/tmp/sess/00000001") 
+    sess, meta_graph_def = session_bundle.LoadSessionBundleFromPath("/tmp/fam/00000001") 
 
     with sess.as_default():
 
-        test_i, test_o = getdata(1)
+        test_i, test_o = getdata(range(1), [8, 16], process) 
         collection_def = meta_graph_def.collection_def
         signatures_any = collection_def[constants.SIGNATURES_KEY].any_list.value
         signatures = manifest_pb2.Signatures()
@@ -30,11 +30,13 @@ def load_from_file():
             z = 0
             allv = test_i[s]
 
-            for v in allv:
-                if np.argmax(sess.run ([output_name],{input_name: [ v ]})[0]) == np.argmax(test_o[s][z]):
-                    gd += 1
-                z = z + 1
+            if len(allv) > 0:
 
-            print ("SNR",SNR[s],"ACC",gd/z)
+                for v in allv:
+                    if np.argmax(sess.run ([output_name],{input_name: [ v ]})[0]) == np.argmax(test_o[s][z]):
+                        gd += 1
+                    z = z + 1
+
+                print ("SNR",SNR[s],"ACC",gd/z)
 
 load_from_file()
