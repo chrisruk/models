@@ -123,7 +123,7 @@ def process(train, m, sn, z, qu, sym, trainv):
             inp[sn].append(np.array([o]))
             out[sn].append(np.array(z))
 
-        if count > 200:
+        if count > 500:
             tb.stop()
             break
 
@@ -140,19 +140,17 @@ def shuffle_in_unison_inplace(a, b):
 
 ## Generate CNN from training data
 def cnn(train_i, train_o, test_i, test_o):
-
+    """
     # CNN1
     c1 = 64
     c2 = 16
     dl = 128
-
+    """
     
     # CNN2
-    """
     c1 = 256
     c2 = 80
     dl = 256
-    """
 
 
 
@@ -199,14 +197,13 @@ def cnn(train_i, train_o, test_i, test_o):
 
     print("Image generator, train",len(X_train))
    
-    """ 
     datagen = ImageDataGenerator(
-        featurewise_center=True,
-        featurewise_std_normalization=True,
-        rotation_range=5,
-        #width_shift_range=0.3,
-        #height_shift_range=0.3,
-        zoom_range=0.3,
+        featurewise_center=False,
+        featurewise_std_normalization=False,
+        rotation_range=0,
+        width_shift_range=0.3,
+        height_shift_range=0.3,
+        zoom_range=[0,1.3],
         shear_range=0.2,
         horizontal_flip=True,
         vertical_flip=True)
@@ -225,7 +222,6 @@ def cnn(train_i, train_o, test_i, test_o):
         validation_data=(
             test_i[0],
             test_o[0]))
-    """
 
     model.fit(X_train, Y_train, batch_size=1024, nb_epoch=10,
             verbose=1,shuffle=True, validation_data=(test_i[0], test_o[0]))
@@ -257,6 +253,6 @@ def cnn(train_i, train_o, test_i, test_o):
     model_exporter.export(export_path, tf.constant(export_version), sess)
 
 if __name__ == '__main__':
-    test_i, test_o = getdata(range(9), [8, 16], process)
-    train_i, train_o = getdata(range(9), [8, 16], process, True)
+    test_i, test_o = getdata(range(9), [2, 3], process)
+    train_i, train_o = getdata(range(9), [2, 3], process, True)
     cnn(train_i, train_o, test_i, test_o)
