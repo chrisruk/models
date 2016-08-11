@@ -10,12 +10,14 @@ import tensorflow as tf
 import time
 
 np.random.seed(1337)  # for reproducibility
-
+from keras.optimizers  import Adam
+from keras.constraints import MaxNorm
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Activation, Flatten
 from keras.layers import Convolution2D
 from keras import backend as K
 from keras.preprocessing.image import ImageDataGenerator
+
 
 from tensorflow.contrib.session_bundle import exporter
 
@@ -121,7 +123,7 @@ def process(train, m, sn, z, qu, sym, trainv):
             inp[sn].append(np.array([o]))
             out[sn].append(np.array(z))
 
-        if count > 500:
+        if count > 200:
             tb.stop()
             break
 
@@ -129,8 +131,32 @@ def process(train, m, sn, z, qu, sym, trainv):
 
     qu.put((inp, out))
 
+
+
+def shuffle_in_unison_inplace(a, b):
+    assert len(a) == len(b)
+    p = np.random.permutation(len(a))
+    return a[p], b[p]
+
 ## Generate CNN from training data
 def cnn(train_i, train_o, test_i, test_o):
+
+    # CNN1
+    c1 = 64
+    c2 = 16
+    dl = 128
+
+    
+    # CNN2
+    """
+    c1 = 256
+    c2 = 80
+    dl = 256
+    """
+
+
+
+
     print("About to train")
 
     sess = tf.Session()
@@ -141,24 +167,23 @@ def cnn(train_i, train_o, test_i, test_o):
 
     nb_classes = len(MOD)
 
-    X_train = train_i
-    Y_train = train_o
+    X_train,Y_train = shuffle_in_unison_inplace( train_i , train_o )
 
     print("About to create model")
 
     model = Sequential()
 
-    model.add(Convolution2D(256, 1, 3,
-                            subsample=(1, 1),
-                            border_mode='valid',
-                            input_shape=(1, 2, 128)))
+    model.add(Convolution2D(c1, 1, 3,
+                            #subsample=(1, 1),
+                            #border_mode='valid',
+                            input_shape=(1, 2, 128))) #,W_constraint = MaxNorm(2)))
     model.add(Activation('relu'))
 
-    model.add(Convolution2D(80, 2, 3))
+    model.add(Convolution2D(c2, 2, 3)) #,W_constraint = MaxNorm(2)))
     model.add(Activation('relu'))
 
     model.add(Flatten())
-    model.add(Dense(256))
+    model.add(Dense(dl))
     model.add(Activation('relu'))
     model.add(Dropout(1 - 0.5))
 
@@ -167,20 +192,24 @@ def cnn(train_i, train_o, test_i, test_o):
 
     print("Going to compile model")
 
+    optimizer = Adam(lr=0.001)
     model.compile(loss='categorical_crossentropy',
-                  optimizer='adam',
+                  optimizer=optimizer,
                   metrics=['accuracy'])
 
-    print("Image generator")
-
+    print("Image generator, train",len(X_train))
+   
+    """ 
     datagen = ImageDataGenerator(
-        featurewise_center=False,
-        featurewise_std_normalization=False,
-        rotation_range=0,
-        width_shift_range=0.2,
-        height_shift_range=0.2,
-        zoom_range=[0, 1.3],
-        horizontal_flip=True)
+        featurewise_center=True,
+        featurewise_std_normalization=True,
+        rotation_range=5,
+        #width_shift_range=0.3,
+        #height_shift_range=0.3,
+        zoom_range=0.3,
+        shear_range=0.2,
+        horizontal_flip=True,
+        vertical_flip=True)
 
     datagen.fit(X_train)
 
@@ -191,14 +220,16 @@ def cnn(train_i, train_o, test_i, test_o):
             batch_size=1024,
             shuffle=True),
         samples_per_epoch=len(X_train),
-        nb_epoch=5,
+        nb_epoch=100,
         verbose=1,
         validation_data=(
             test_i[0],
             test_o[0]))
+    """
 
-    # model.fit(X_train, Y_train, batch_size=batch_size, nb_epoch=nb_epoch,
-    #          verbose=1,shuffle=True, validation_data=(test_i[0], test_o[0]))
+    model.fit(X_train, Y_train, batch_size=1024, nb_epoch=10,
+            verbose=1,shuffle=True, validation_data=(test_i[0], test_o[0]))
+    
 
     for s in range(len(test_i)):
         X_test = test_i[s]
