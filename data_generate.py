@@ -13,7 +13,7 @@ from gnuradio import blocks
 from gnuradio import channels
 
 ## Whether to use channel model or not
-channel_model = True
+channel_model = False
 ## String list of SNRs
 SNR = ["20", "15", "10", "5", "0", "-5", "-10", "-15", "-20"]
 
@@ -29,7 +29,8 @@ SNRV = [[1, 0.32],
         [0.32, 1]]
 
 ## List of modulation schemes to use
-MOD = ["fsk", "qam16", "qam64", "2psk", "4psk", "8psk", "gmsk", "wbfm", "nfm"]
+MOD = ["fsk", "qam16", "qam64", "allpsk", "gmsk", "wbfm", "nfm"]   #"4psk", "8psk", 
+
 
 """
 ## Single process
@@ -102,12 +103,26 @@ def getdata(sn, syms, process, train=False):
 
         q = Queue()  # create a queue object
         plist = []
+
+
+
+        if m == "allpsk":
         
-        for s in sn:
-            for sy in syms:
-                p = Process(target=process, args=(train, m, s, z, q, sy, train))
-                plist.append(p)
-                p.start()
+            for md in [ "2psk","4psk","8psk" ] :            
+                print(md)
+                for s in sn: # iterate through SNRs
+                    for sy in syms: # iterate through symbol rates
+                        p = Process(target=process, args=(train, md, s, z, q, sy))
+                        plist.append(p)
+                        p.start()
+        else:
+    
+            for s in sn: # iterate through SNRs
+                for sy in syms: # iterate through symbol rates
+                    p = Process(target=process, args=(train, m, s, z, q, sy))
+                    plist.append(p)
+                    p.start()
+
 
         for p in plist:
             job = q.get()
@@ -125,6 +140,12 @@ def getdata(sn, syms, process, train=False):
         print("joined")
 
         mcount += 1
+
+    if not train:
+        for k in range(0,len(SNR)):
+            inp[k] = np.array(inp[k])
+            out[k] = np.array(out[k])
+
 
     return np.array(inp), np.array(out)
 

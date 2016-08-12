@@ -21,8 +21,13 @@ from tensorflow.contrib.session_bundle import exporter
 
 from data_generate import *
 
+def shuffle_in_unison_inplace(a, b):
+    assert len(a) == len(b)
+    p = np.random.permutation(len(a))
+    return a[p], b[p]
+
 def reseed():
-    random.seed()
+    #random.seed()
     np.random.seed() 
 
 Np = 64  # 2xNp is the number of columns
@@ -51,7 +56,7 @@ class fam_generate(gr.top_block):
             gr.sizeof_gr_complex * 1, 1024)
         self.blocks_null_sink_0 = blocks.null_sink(gr.sizeof_float * 1)
         self.analog_noise_source_x_0 = analog.noise_source_c(
-            analog.GR_GAUSSIAN, SNRV[sn][1], 0)
+            analog.GR_GAUSSIAN, SNRV[sn][1], np.random.randint(np.iinfo(np.int32).max))
         self.analog_random_source_x_0 = blocks.vector_source_b(
             map(int, np.random.randint(0, 256, 2000000)), False)
         self.msgq_out = blocks_message_sink_0_msgq_out = gr.msg_queue(1)
@@ -96,7 +101,7 @@ class fam_generate(gr.top_block):
                      (self.blocks_probe_signal_vx_0, 0))
 
 ## Invokes flow graph and returns FAM data
-def process(train, m, sn, z, qu, sym,trainv):
+def process(train, m, sn, z, qu, sym):
 
     # Without this, multiple processes all generate exactly the same sequence of random numbers
     reseed()
@@ -108,7 +113,7 @@ def process(train, m, sn, z, qu, sym,trainv):
         inp = [[] for k in range(0, len(SNR))]
         out = [[] for k in range(0, len(SNR))]
 
-    tb = fam_generate(m, sn, sym,trainv)
+    tb = fam_generate(m, sn, sym, train)
     tb.start()
 
     time.sleep(3)
@@ -131,7 +136,7 @@ def process(train, m, sn, z, qu, sym,trainv):
             inp[sn].append(np.array([floats]))
             out[sn].append(np.array(z))
 
-        if count > 20:
+        if count > 35:
             tb.stop()
             break
 
@@ -145,19 +150,17 @@ def fam(train_i, train_o, test_i, test_o):
     K.set_session(sess)
     K.set_learning_phase(1)
 
-    batch_size = 30
+    batch_size = 60
     nb_classes = len(MOD)
-    nb_epoch = 20
+    nb_epoch = 3
 
     img_rows, img_cols = 2 * P * L, 2 * Np
     nb_filters = 64
     nb_pool = 2
 
-    X_train = train_i
-    Y_train = train_o
-
-    X_test = test_i[0]
-    Y_test = test_o[0]
+    X_train,Y_train = shuffle_in_unison_inplace( np.array(train_i) , np.array(train_o) )
+    #X_test = test_i[0]
+    #Y_test = test_o[0]
 
     model = Sequential()
 
@@ -197,6 +200,8 @@ def fam(train_i, train_o, test_i, test_o):
 
 
     for s in range(len(test_i)):
+        if len(test_i[s]) == 0:
+            continue
         X_test = test_i[s]
         Y_test = test_o[s]
         score = model.evaluate(X_test, Y_test, verbose=0)
@@ -225,12 +230,10 @@ if __name__ == '__main__':
 
     reseed()
 
-    test_i, test_o = getdata(range(1), [8, 16], process)
-
-    time.sleep(10)
+    test_i, test_o = getdata(range(1), [3], process)
 
     reseed()
 
-    train_i, train_o = getdata(range(5), [8, 16], process, True)
+    train_i, train_o = getdata(range(5), [3], process, True)
 
     fam(train_i, train_o, test_i, test_o)

@@ -14,7 +14,7 @@ def load_from_file():
 
     with sess.as_default():
 
-        test_i, test_o = getdata(range(1), [8, 16], process) 
+        test_i, test_o = getdata(range(1), [3], process) 
         collection_def = meta_graph_def.collection_def
         signatures_any = collection_def[constants.SIGNATURES_KEY].any_list.value
         signatures = manifest_pb2.Signatures()
