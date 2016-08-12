@@ -12,11 +12,8 @@ from gnuradio import digital
 from gnuradio import blocks
 from gnuradio import channels
 
-np.random.seed(1337)  # for reproducibility
-
 ## Whether to use channel model or not
-channel_model = False
-
+channel_model = True
 ## String list of SNRs
 SNR = ["20", "15", "10", "5", "0", "-5", "-10", "-15", "-20"]
 
@@ -34,8 +31,8 @@ SNRV = [[1, 0.32],
 ## List of modulation schemes to use
 MOD = ["fsk", "qam16", "qam64", "2psk", "4psk", "8psk", "gmsk", "wbfm", "nfm"]
 
-
-
+"""
+## Single process
 ## Generate training data using multiple flow graphs running simultaneously
 def getdata(sn, syms, process, train=False):
 
@@ -79,9 +76,9 @@ def getdata(sn, syms, process, train=False):
 
     return np.array(inp), np.array(out)
 
-
-
 """
+
+## Multiprocess
 ## Generate training data using multiple flow graphs running simultaneously
 def getdata(sn, syms, process, train=False):
 
@@ -130,7 +127,7 @@ def getdata(sn, syms, process, train=False):
         mcount += 1
 
     return np.array(inp), np.array(out)
-"""
+
 
 ## Initialise blocks for flow graph
 def create_blocks(self, modulation, sym, sn, train):
@@ -230,11 +227,14 @@ def create_blocks(self, modulation, sym, sn, train):
         fh=-1.0,
     )
 
+    
     self.channels_channel_model_0 = channels.channel_model(
         noise_voltage=SNRV[sn][1],
         frequency_offset=100.0,
         epsilon=1.0,
         taps=(1.0 + 1.0j, ),
-        noise_seed=0,
+        noise_seed=np.random.randint(np.iinfo(np.int32).max),
         block_tags=False
     )
+
+    #self.channels_channel_model_0 = channels.fading_model( 8, 10.0/samp_rate, False, 4.0, 0 )

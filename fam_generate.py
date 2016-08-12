@@ -16,21 +16,14 @@ from keras.layers import Dense, Dropout, Activation, Flatten
 from keras.layers import Convolution2D, MaxPooling2D
 from keras.utils import np_utils
 from keras import backend as K
-
+from keras.regularizers import l2
 from tensorflow.contrib.session_bundle import exporter
 
 from data_generate import *
 
-
-
-
-
 def reseed():
     random.seed()
     np.random.seed() 
-
-
-
 
 Np = 64  # 2xNp is the number of columns
 P = 256  # number of new items needed to calculate estimate
@@ -105,6 +98,7 @@ class fam_generate(gr.top_block):
 ## Invokes flow graph and returns FAM data
 def process(train, m, sn, z, qu, sym,trainv):
 
+    # Without this, multiple processes all generate exactly the same sequence of random numbers
     reseed()
 
     if train:
@@ -147,7 +141,6 @@ def process(train, m, sn, z, qu, sym,trainv):
 
 ## Generate CNN from training data
 def fam(train_i, train_o, test_i, test_o):
-    
     sess = tf.Session()
     K.set_session(sess)
     K.set_learning_phase(1)
@@ -171,12 +164,14 @@ def fam(train_i, train_o, test_i, test_o):
     model.add(Convolution2D(nb_filters, 3, 3,
                             subsample=(2, 2),
                             border_mode='valid',
-                            input_shape=(1, img_rows, img_cols)))
+                            input_shape=(1, img_rows, img_cols),
+                            W_regularizer = l2(.01)))
+
     model.add(Activation('relu'))
 
     model.add(MaxPooling2D(pool_size=(nb_pool, nb_pool)))
 
-    model.add(Convolution2D(nb_filters, 3, 3))
+    model.add(Convolution2D(nb_filters, 3, 3,W_regularizer = l2(.01)))
     model.add(Activation('relu'))
 
     model.add(MaxPooling2D(pool_size=(nb_pool, nb_pool)))
@@ -194,7 +189,7 @@ def fam(train_i, train_o, test_i, test_o):
     model.add(Activation('softmax', name="out"))
 
     model.compile(loss='categorical_crossentropy',
-                  optimizer='adadelta',
+                  optimizer='adam',
                   metrics=['accuracy'])
 
     model.fit(X_train, Y_train, batch_size=batch_size, nb_epoch=nb_epoch,
