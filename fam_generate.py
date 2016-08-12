@@ -9,6 +9,7 @@ import numpy as np
 import tensorflow as tf
 import specest
 import time
+import random
 
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Activation, Flatten
@@ -19,6 +20,17 @@ from keras import backend as K
 from tensorflow.contrib.session_bundle import exporter
 
 from data_generate import *
+
+
+
+
+
+def reseed():
+    random.seed()
+    np.random.seed() 
+
+
+
 
 Np = 64  # 2xNp is the number of columns
 P = 256  # number of new items needed to calculate estimate
@@ -93,6 +105,8 @@ class fam_generate(gr.top_block):
 ## Invokes flow graph and returns FAM data
 def process(train, m, sn, z, qu, sym,trainv):
 
+    reseed()
+
     if train:
         inp = []
         out = []
@@ -133,10 +147,9 @@ def process(train, m, sn, z, qu, sym,trainv):
 
 ## Generate CNN from training data
 def fam(train_i, train_o, test_i, test_o):
+    
     sess = tf.Session()
-
     K.set_session(sess)
-
     K.set_learning_phase(1)
 
     batch_size = 60
@@ -185,7 +198,7 @@ def fam(train_i, train_o, test_i, test_o):
                   metrics=['accuracy'])
 
     model.fit(X_train, Y_train, batch_size=batch_size, nb_epoch=nb_epoch,
-              verbose=1, validation_data=(test_i[0], test_o[0]))
+              verbose=1, shuffle=True, validation_data=(test_i[0], test_o[0]))
 
 
     for s in range(len(test_i)):
@@ -207,13 +220,22 @@ def fam(train_i, train_o, test_i, test_o):
     saver = tf.train.Saver(sharded=True)
     model_exporter = exporter.Exporter(saver)
     signature = exporter.classification_signature(
-        input_tensor=model.input, scores_tensor=model.output)
+        input_tensor=new_model.input, scores_tensor=new_model.output)
     model_exporter.init(
         sess.graph.as_graph_def(),
         default_graph_signature=signature)
     model_exporter.export(export_path, tf.constant(export_version), sess)
 
 if __name__ == '__main__':
+
+    reseed()
+
     test_i, test_o = getdata(range(9), [8, 16], process)
+
+    time.sleep(10)
+
+    reseed()
+
     train_i, train_o = getdata(range(9), [8, 16], process, True)
+
     fam(train_i, train_o, test_i, test_o)

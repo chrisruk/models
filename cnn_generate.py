@@ -8,8 +8,8 @@ from __future__ import division, print_function, absolute_import
 import numpy as np
 import tensorflow as tf
 import time
+import random
 
-np.random.seed(1337)  # for reproducibility
 from keras.optimizers  import Adam
 from keras.constraints import MaxNorm
 from keras.models import Sequential
@@ -24,6 +24,14 @@ from tensorflow.contrib.session_bundle import exporter
 from data_generate import *
 
 np.set_printoptions(threshold=np.nan)
+
+
+
+
+def reseed():
+    random.seed()
+    np.random.seed() 
+
 
 ## Handles flow graph for CNN
 class cnn_generate(gr.top_block):
@@ -95,6 +103,8 @@ class cnn_generate(gr.top_block):
 ## Invokes flow graph and returns 128 blocks of samples for the CNN
 def process(train, m, sn, z, qu, sym, trainv):
 
+    reseed()
+
     if train:
         inp = []
         out = []
@@ -140,19 +150,20 @@ def shuffle_in_unison_inplace(a, b):
 
 ## Generate CNN from training data
 def cnn(train_i, train_o, test_i, test_o):
-    """
+    
     # CNN1
     c1 = 64
     c2 = 16
     dl = 128
-    """
     
+    """ 
     # CNN2
     c1 = 256
     c2 = 80
     dl = 256
+    """
 
-
+    nb_epoch = 100
 
 
     print("About to train")
@@ -217,15 +228,16 @@ def cnn(train_i, train_o, test_i, test_o):
             batch_size=1024,
             shuffle=True),
         samples_per_epoch=len(X_train),
-        nb_epoch=100,
+        nb_epoch=nb_epoch,
         verbose=1,
         validation_data=(
             test_i[0],
             test_o[0]))
 
-    model.fit(X_train, Y_train, batch_size=1024, nb_epoch=10,
-            verbose=1,shuffle=True, validation_data=(test_i[0], test_o[0]))
+    #model.fit(X_train, Y_train, batch_size=1024, nb_epoch=nb_epoch,
+    #        verbose=1,shuffle=True, validation_data=(test_i[0], test_o[0]))
     
+    #learning = sess.graph.get_tensor_by_name("keras_learning_phase:0")
 
     for s in range(len(test_i)):
         X_test = test_i[s]
@@ -234,6 +246,7 @@ def cnn(train_i, train_o, test_i, test_o):
         print("SNR", SNR[s], "Test accuracy:", score[1])
 
     K.set_learning_phase(0)
+
     config = model.get_config()
     weights = model.get_weights()
 
@@ -246,13 +259,23 @@ def cnn(train_i, train_o, test_i, test_o):
     saver = tf.train.Saver(sharded=True)
     model_exporter = exporter.Exporter(saver)
     signature = exporter.classification_signature(
-        input_tensor=model.input, scores_tensor=model.output)
+        input_tensor=new_model.input, scores_tensor=new_model.output)
     model_exporter.init(
         sess.graph.as_graph_def(),
         default_graph_signature=signature)
     model_exporter.export(export_path, tf.constant(export_version), sess)
 
 if __name__ == '__main__':
+
+    reseed()
+
     test_i, test_o = getdata(range(9), [2, 3], process)
+        
+    time.sleep(10)
+
+    # This is very important!
+    reseed()
+
     train_i, train_o = getdata(range(9), [2, 3], process, True)
+
     cnn(train_i, train_o, test_i, test_o)
