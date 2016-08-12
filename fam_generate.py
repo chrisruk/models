@@ -145,7 +145,7 @@ def fam(train_i, train_o, test_i, test_o):
     K.set_session(sess)
     K.set_learning_phase(1)
 
-    batch_size = 60
+    batch_size = 30
     nb_classes = len(MOD)
     nb_epoch = 20
 
@@ -225,12 +225,12 @@ if __name__ == '__main__':
 
     reseed()
 
-    test_i, test_o = getdata(range(9), [8, 16], process)
+    test_i, test_o = getdata(range(1), [8, 16], process)
 
     time.sleep(10)
 
     reseed()
 
-    train_i, train_o = getdata(range(9), [8, 16], process, True)
+    train_i, train_o = getdata(range(5), [8, 16], process, True)
 
     fam(train_i, train_o, test_i, test_o)
