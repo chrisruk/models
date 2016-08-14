@@ -29,7 +29,7 @@ SNRV = [[1, 0.32],
         [0.32, 1]]
 
 ## List of modulation schemes to use
-MOD = ["fsk", "qam16", "qam64", "allpsk", "gmsk", "wbfm", "nfm"]   #"4psk", "8psk", 
+MOD = ["fsk", "qam16", "qam64", "2psk","gmsk", "wbfm", "nfm"]   #"4psk", "8psk", 
 
 
 """

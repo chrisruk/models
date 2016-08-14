@@ -14,6 +14,8 @@ import random
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Activation, Flatten
 from keras.layers import Convolution2D, MaxPooling2D
+from keras.layers.normalization import BatchNormalization
+from keras.preprocessing.image import *
 from keras.utils import np_utils
 from keras import backend as K
 from keras.regularizers import l2
@@ -31,8 +33,8 @@ def reseed():
     np.random.seed() 
 
 Np = 64  # 2xNp is the number of columns
-P = 256  # number of new items needed to calculate estimate
-L = 2
+P =  256  # number of new items needed to calculate estimate
+L =  2
 
 np.set_printoptions(threshold=np.nan)
 
@@ -136,7 +138,7 @@ def process(train, m, sn, z, qu, sym):
             inp[sn].append(np.array([floats]))
             out[sn].append(np.array(z))
 
-        if count > 35:
+        if count > 30:
             tb.stop()
             break
 
@@ -152,48 +154,55 @@ def fam(train_i, train_o, test_i, test_o):
 
     batch_size = 60
     nb_classes = len(MOD)
-    nb_epoch = 3
+    nb_epoch = 10
 
     img_rows, img_cols = 2 * P * L, 2 * Np
-    nb_filters = 64
+    nb_filters = 96
     nb_pool = 2
 
     X_train,Y_train = shuffle_in_unison_inplace( np.array(train_i) , np.array(train_o) )
-    #X_test = test_i[0]
-    #Y_test = test_o[0]
 
     model = Sequential()
-
-    model.add(Convolution2D(nb_filters, 3, 3,
-                            subsample=(2, 2),
-                            border_mode='valid',
-                            input_shape=(1, img_rows, img_cols),
-                            W_regularizer = l2(.01)))
-
+    model.add(Convolution2D(64, 11, 11,subsample=(2,2),
+                            input_shape=(1, img_rows, img_cols)))
     model.add(Activation('relu'))
+    model.add(MaxPooling2D(pool_size=(2, 2)))
 
-    model.add(MaxPooling2D(pool_size=(nb_pool, nb_pool)))
-
-    model.add(Convolution2D(nb_filters, 3, 3,W_regularizer = l2(.01)))
+    model.add(Convolution2D(128, 3, 3))
     model.add(Activation('relu'))
-
-    model.add(MaxPooling2D(pool_size=(nb_pool, nb_pool)))
+    model.add(MaxPooling2D(pool_size=(2,2)))
 
     model.add(Flatten())
-    model.add(Dense(512))
-    model.add(Activation('relu'))
-    model.add(Dropout(1 - 0.7))
+    model.add(Dense(512,activation='relu'))
+    model.add(Dropout(0.5)) 
 
-    model.add(Dense(512))
-    model.add(Activation('relu'))
-    model.add(Dropout(1 - 0.7))
+    model.add(Dense(512,activation='relu'))
+    model.add(Dropout(0.5)) 
 
-    model.add(Dense(nb_classes))
+    model.add(Dense(nb_classes,init='normal'))
     model.add(Activation('softmax', name="out"))
 
     model.compile(loss='categorical_crossentropy',
                   optimizer='adam',
                   metrics=['accuracy'])
+
+    """
+    datagen = ImageDataGenerator(
+        #featurewise_center=True,
+        #featurewise_std_normalization=True,
+        rotation_range=20,
+        #width_shift_range=0.3,
+        #height_shift_range=0.3,
+        #zoom_range=[0,1.3],
+        horizontal_flip=True,
+        vertical_flip=True)
+
+    datagen.fit(X_train)
+
+    model.fit_generator(datagen.flow(X_train, Y_train, batch_size=batch_size,shuffle=True),
+                    samples_per_epoch=len(X_train), nb_epoch=5,verbose=1,validation_data=(test_i[0], test_o[0]))
+
+    """
 
     model.fit(X_train, Y_train, batch_size=batch_size, nb_epoch=nb_epoch,
               verbose=1, shuffle=True, validation_data=(test_i[0], test_o[0]))
