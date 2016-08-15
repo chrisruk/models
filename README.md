@@ -16,6 +16,10 @@ It is important that .keras/keras.json, looks something like this:
 }
 ```
 
+For fam_generate.py be sure to install the gr-specest fork from: 
+
+https://github.com/chrisruk/gr-specest
+
 # To generate documentation use:
 
 doxygen models.dox
