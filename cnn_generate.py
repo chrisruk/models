@@ -253,7 +253,7 @@ def shuffle_in_unison_inplace(a, b):
     return a[p], b[p]
 
 ## Generate CNN from training data
-def cnn(train_i, train_o, test_i, test_o):
+def cnn(train_i, train_o, test_i, test_o,mod):
     
     # CNN1
     c1 = 64
@@ -267,7 +267,7 @@ def cnn(train_i, train_o, test_i, test_o):
     dl = 256
     """
 
-    nb_epoch = 400
+    nb_epoch = 1
 
 
     print("About to train")
@@ -368,10 +368,13 @@ def cnn(train_i, train_o, test_i, test_o):
     export_path = "/tmp/cnn"
     export_version = 1
 
+    labels_tensor = tf.constant(mod)
+
+
     saver = tf.train.Saver(sharded=True)
     model_exporter = exporter.Exporter(saver)
     signature = exporter.classification_signature(
-        input_tensor=new_model.input, scores_tensor=new_model.output)
+        input_tensor=new_model.input,classes_tensor=labels_tensor, scores_tensor=new_model.output)
     model_exporter.init(
         sess.graph.as_graph_def(),
         default_graph_signature=signature)
@@ -395,4 +398,4 @@ if __name__ == '__main__':
     #print("train",train_i[0],train_o[0])
     #print("test",test_i[18][0],test_o[18][0])
  
-    cnn(train_i, train_o, test_i, test_o)
+    cnn(train_i, train_o, test_i, test_o,mod)
