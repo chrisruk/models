@@ -154,7 +154,7 @@ def fam(train_i, train_o, test_i, test_o):
 
     batch_size = 60
     nb_classes = len(MOD)
-    nb_epoch = 10
+    nb_epoch = 1
 
     img_rows, img_cols = 2 * P * L, 2 * Np
     nb_filters = 96
@@ -226,10 +226,12 @@ def fam(train_i, train_o, test_i, test_o):
     export_path = "/tmp/fam"
     export_version = 1
 
+    labels_tensor = tf.constant(MOD)
+
     saver = tf.train.Saver(sharded=True)
     model_exporter = exporter.Exporter(saver)
     signature = exporter.classification_signature(
-        input_tensor=new_model.input, scores_tensor=new_model.output)
+        input_tensor=new_model.input,classes_tensor=labels_tensor,scores_tensor=new_model.output)
     model_exporter.init(
         sess.graph.as_graph_def(),
         default_graph_signature=signature)

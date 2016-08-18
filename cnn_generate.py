@@ -202,7 +202,7 @@ class cnn_generate(gr.top_block):
         #             (self.blocks_probe_signal_vx_0, 0))
 
 ## Invokes flow graph and returns 128 blocks of samples for the CNN
-def process(train, m, sn, z, qu, sym, trainv):
+def process(train, m, sn, z, qu, sym):
 
     # Without this, multiple processes all generate exactly the same sequence of random numbers
     reseed()
@@ -216,7 +216,7 @@ def process(train, m, sn, z, qu, sym, trainv):
         inp = [[] for k in range(0, len(SNR))]
         out = [[] for k in range(0, len(SNR))]
 
-    tb = cnn_generate(m, sn, sym, trainv)
+    tb = cnn_generate(m, sn, sym, train)
     tb.start()
 
     time.sleep(1)
@@ -237,7 +237,7 @@ def process(train, m, sn, z, qu, sym, trainv):
             inp[sn].append(np.array([o]))
             out[sn].append(np.array(z))
 
-        if count > 500:
+        if count > 100:
             tb.stop()
             break
 
@@ -267,7 +267,7 @@ def cnn(train_i, train_o, test_i, test_o):
     dl = 256
     """
 
-    nb_epoch = 100
+    nb_epoch = 400
 
 
     print("About to train")
@@ -278,9 +278,11 @@ def cnn(train_i, train_o, test_i, test_o):
     
     print("Created session")
 
-    nb_classes =  len(MOD) # 11
+    nb_classes =  11# len(MOD) # 11
 
-    X_train,Y_train = shuffle_in_unison_inplace( np.array(train_i) , np.array(train_o) )
+    #X_train,Y_train = shuffle_in_unison_inplace( np.array(train_i) , np.array(train_o) )
+    X_train = np.array(train_i)
+    Y_train = np.array(train_o)
 
     print("About to create model")
 
@@ -314,7 +316,7 @@ def cnn(train_i, train_o, test_i, test_o):
     print("Image generator, train",len(X_train))
   
      
-    datagen = ImageDataGenerator()
+    #datagen = ImageDataGenerator()
         #featurewise_center=False,
         #featurewise_std_normalization=False,
         #rotation_range=0,
@@ -342,18 +344,18 @@ def cnn(train_i, train_o, test_i, test_o):
             test_o[0]))
     """
 
-    print("len",X_train.shape,Y_train.shape)#,test_i[18].shape,test_o[18].shape)
+    #print("len",X_train.shape,Y_train.shape)#,test_i[18].shape,test_o[18].shape)
 
     model.fit(X_train, Y_train, batch_size=1024, nb_epoch=nb_epoch,
-            verbose=1,shuffle=True , validation_data=(np.array(test_i[0]), np.array(test_o[0])))
+            verbose=1,shuffle=True, validation_split=0.1)#validation_data=(np.array(test_i[18]), np.array(test_o[18])))
     
     #learning = sess.graph.get_tensor_by_name("keras_learning_phase:0")
 
-    for s in test_i:
-        X_test = test_i[s]
-        Y_test = test_o[s]
+    for s in sorted(test_i):
+        X_test = np.array(test_i[s])
+        Y_test = np.array(test_o[s])
         score = model.evaluate(X_test, Y_test, verbose=0)
-        print("SNR", SNR[s], "Test accuracy:", score[1])
+        print("SNR", s, "Test accuracy:", score[1])
 
     K.set_learning_phase(0)
 
@@ -380,16 +382,16 @@ if __name__ == '__main__':
     
     reseed()
 
-    test_i, test_o = getdata(range(9), [8, 16], process)
+    #test_i, test_o = getdata(range(1), [3,4], process)
         
     time.sleep(10)
 
     # This is very important!
     reseed()
 
-    train_i, train_o = getdata([3,4,5,6,7,8], [8, 16], process, True)
+    #train_i, train_o = getdata(range(9), [3,4], process, True)
     
-    #train_i,train_o,test_i,test_o,mod,data = loadRadio()
+    train_i,train_o,test_i,test_o,mod,data = loadRadio()
     #print("train",train_i[0],train_o[0])
     #print("test",test_i[18][0],test_o[18][0])
  
