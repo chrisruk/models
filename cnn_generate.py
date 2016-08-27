@@ -28,11 +28,7 @@ from data_generate import *
 
 np.set_printoptions(threshold=np.nan)
 
-
-def reseed():
-    random.seed()
-    np.random.seed() 
-
+## \brief Loads RadioML data
 def loadRadio():
 
     radioml = cPickle.load(open("2016.04C.multisnr.pkl",'rb'))
@@ -94,6 +90,11 @@ def loadRadio():
 ## Handles flow graph for CNN
 class cnn_generate(gr.top_block):
 
+    ## \brief Creates flow graph
+    ## \param modulation Modulation scheme to use
+    ## \param sn List of SNRs
+    ## \param sym List of symbol rates
+    ## \param train Whether we are generating training data or testing data
     def __init__(self, modulation, sn, sym, train):
         self.samp_rate = samp_rate = 100e3
         gr.top_block.__init__(self)
@@ -155,11 +156,6 @@ class cnn_generate(gr.top_block):
                      (self.blocks_multiply_const_vxx_3, 0))
 
         if not channel_model:
-
-            #self.connect((self.blocks_add_xx_1, 0),
-            #             (self.blocks_stream_to_vector_0, 0))
-
-
             self.connect((self.blocks_add_xx_1, 0), (self.blocks_keep_m_in_n_0, 0))    
             self.connect((self.blocks_add_xx_1, 0), (self.blocks_keep_m_in_n_0_0, 0))   
 
@@ -171,17 +167,9 @@ class cnn_generate(gr.top_block):
 
             self.connect((self.blocks_interleave_0, 0),
                      (self.blocks_probe_signal_vx_0, 0))
-
-
-            
-
         else:
-
-            print("Using channel model")
-
             self.connect((self.blocks_multiply_const_vxx_3, 0),
                          (self.channels_channel_model_0, 0))
-
 
             self.connect((self.channels_channel_model_0, 0), (self.blocks_keep_m_in_n_0, 0))    
             self.connect((self.channels_channel_model_0, 0), (self.blocks_keep_m_in_n_0_0, 0))   
@@ -195,19 +183,17 @@ class cnn_generate(gr.top_block):
             self.connect((self.blocks_interleave_0, 0),
                      (self.blocks_probe_signal_vx_0, 0))
 
-
-
-
-        #self.connect((self.blocks_stream_to_vector_0, 0),
-        #             (self.blocks_probe_signal_vx_0, 0))
-
-## Invokes flow graph and returns 128 blocks of samples for the CNN
+## \brief Invokes flow graph and returns 128 blocks of samples for the CNN
+## \param train Whether we are training or not
+## \param m Modulation scheme
+## \param sn List of SNRs
+## \param z One-hot array representing modulation scheme
+## \param qu Queue to return data 
+## \param sym List of symbol rates
 def process(train, m, sn, z, qu, sym):
 
     # Without this, multiple processes all generate exactly the same sequence of random numbers
     reseed()
-
-    #print(np.random.randint(0, 100, 10))
 
     if train:
         inp = []
@@ -245,15 +231,13 @@ def process(train, m, sn, z, qu, sym):
 
     qu.put((inp, out))
 
-
-
-def shuffle_in_unison_inplace(a, b):
-    assert len(a) == len(b)
-    p = np.random.permutation(len(a))
-    return a[p], b[p]
-
-## Generate CNN from training data
-def cnn(train_i, train_o, test_i, test_o,mod):
+## \brief Generate CNN from training data
+## \param train_i Training data
+## \param train_o Class for each training item
+## \param test_i Testing data
+## \param test_o Class for each testing item
+## \param mod List of modulation schemes
+def cnn(train_i, train_o, test_i, test_o, mod):
     
     # CNN1
     c1 = 64
@@ -266,56 +250,42 @@ def cnn(train_i, train_o, test_i, test_o,mod):
     c2 = 80
     dl = 256
     """
-
+    
     nb_epoch = 1
-
-
-    print("About to train")
 
     sess = tf.Session()
     K.set_session(sess)
     K.set_learning_phase(1)
     
-    print("Created session")
-
-    nb_classes =  11# len(MOD) # 11
+    nb_classes = len(mod)
 
     #X_train,Y_train = shuffle_in_unison_inplace( np.array(train_i) , np.array(train_o) )
+
     X_train = np.array(train_i)
     Y_train = np.array(train_o)
 
-    print("About to create model")
-
     model = Sequential()
-
     model.add(Convolution2D(c1, 1, 3,
                             #subsample=(1, 1),
                             #border_mode='valid',
                             input_shape=(1, 2, 128)))
                             #W_regularizer = l2(.01))) #,W_constraint = MaxNorm(2)))
     model.add(Activation('relu'))
-
     model.add(Convolution2D(c2, 2, 3)) #W_regularizer = l2(.01))) #,W_constraint = MaxNorm(2)))
     model.add(Activation('relu'))
-
     model.add(Flatten())
     model.add(Dense(dl))
     model.add(Activation('relu'))
     model.add(Dropout(1 - 0.5))
-
     model.add(Dense(nb_classes))
     model.add(Activation('softmax', name="out"))
 
-    print("Going to compile model")
 
     optimizer = Adam(lr=0.001)
     model.compile(loss='categorical_crossentropy',
                   optimizer=optimizer,
                   metrics=['accuracy'])
 
-    print("Image generator, train",len(X_train))
-  
-     
     #datagen = ImageDataGenerator()
         #featurewise_center=False,
         #featurewise_std_normalization=False,
@@ -344,13 +314,9 @@ def cnn(train_i, train_o, test_i, test_o,mod):
             test_o[0]))
     """
 
-    #print("len",X_train.shape,Y_train.shape)#,test_i[18].shape,test_o[18].shape)
-
     model.fit(X_train, Y_train, batch_size=1024, nb_epoch=nb_epoch,
             verbose=1,shuffle=True, validation_split=0.1)#validation_data=(np.array(test_i[18]), np.array(test_o[18])))
     
-    #learning = sess.graph.get_tensor_by_name("keras_learning_phase:0")
-
     for s in sorted(test_i):
         X_test = np.array(test_i[s])
         Y_test = np.array(test_o[s])
@@ -370,7 +336,6 @@ def cnn(train_i, train_o, test_i, test_o,mod):
 
     labels_tensor = tf.constant(mod)
 
-
     saver = tf.train.Saver(sharded=True)
     model_exporter = exporter.Exporter(saver)
     signature = exporter.classification_signature(
@@ -381,21 +346,14 @@ def cnn(train_i, train_o, test_i, test_o,mod):
     model_exporter.export(export_path, tf.constant(export_version), sess)
 
 if __name__ == '__main__':
-
     
+    """
     reseed()
-
-    #test_i, test_o = getdata(range(1), [3,4], process)
-        
-    time.sleep(10)
-
-    # This is very important!
+    test_i, test_o = getdata(range(1), [3,4], process)
     reseed()
+    train_i, train_o = getdata(range(9), [3,4], process, True)
+    """
 
-    #train_i, train_o = getdata(range(9), [3,4], process, True)
-    
     train_i,train_o,test_i,test_o,mod,data = loadRadio()
-    #print("train",train_i[0],train_o[0])
-    #print("test",test_i[18][0],test_o[18][0])
- 
-    cnn(train_i, train_o, test_i, test_o,mod)
+    
+    cnn(train_i, train_o, test_i, test_o, mod)

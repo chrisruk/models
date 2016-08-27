@@ -30,6 +30,16 @@ SNRV = [[1, 0.32],
 ## List of modulation schemes to use
 MOD = ["fsk", "qam16", "qam64", "2psk","gmsk", "wbfm", "nfm"]   #"4psk", "8psk", 
 
+## \brief Shuffles 2 arrays using same order for both
+def shuffle_in_unison_inplace(a, b):
+    assert len(a) == len(b)
+    p = np.random.permutation(len(a))
+    return a[p], b[p]
+
+## \brief Reseeds the RNG
+def reseed():
+    np.random.seed() 
+
 ## \brief Generate training data using multiple flow graphs running simultaneously
 ## \param sn List of SNRs
 ## \param syms List of symbol rates

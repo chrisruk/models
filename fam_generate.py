@@ -23,17 +23,10 @@ from tensorflow.contrib.session_bundle import exporter
 
 from data_generate import *
 
-def shuffle_in_unison_inplace(a, b):
-    assert len(a) == len(b)
-    p = np.random.permutation(len(a))
-    return a[p], b[p]
-
-def reseed():
-    #random.seed()
-    np.random.seed() 
-
-Np = 64  # 2xNp is the number of columns
-P =  256  # number of new items needed to calculate estimate
+## 2xNp is the number of columns
+Np = 64  
+## number of new items needed to calculate estimate
+P =  256
 L =  2
 
 np.set_printoptions(threshold=np.nan)
@@ -41,6 +34,11 @@ np.set_printoptions(threshold=np.nan)
 ## Handles flowgraph for FAM
 class fam_generate(gr.top_block):
 
+    ## \brief Creates flow graph
+    ## \param modulation Modulation scheme to use
+    ## \param sn List of SNRs
+    ## \param sym List of symbol rates
+    ## \param train Whether we are generating training data or testing data
     def __init__(self, modulation, sn, sym, train):
 
         self.samp_rate = samp_rate = 100e3
@@ -102,7 +100,13 @@ class fam_generate(gr.top_block):
         self.connect((self.blocks_stream_to_vector_0, 0),
                      (self.blocks_probe_signal_vx_0, 0))
 
-## Invokes flow graph and returns FAM data
+## \brief Invokes flow graph and returns FAM data
+## \param train Whether we are training or not
+## \param m Modulation scheme
+## \param sn List of SNRs
+## \param z One-hot array representing modulation scheme
+## \param qu Queue to return data 
+## \param sym List of symbol rates
 def process(train, m, sn, z, qu, sym):
 
     # Without this, multiple processes all generate exactly the same sequence of random numbers
@@ -146,7 +150,11 @@ def process(train, m, sn, z, qu, sym):
 
     qu.put((inp, out))
 
-## Generate CNN from training data
+## \brief Generate FAM from training data
+## \param train_i Training data
+## \param train_o Class for each training item
+## \param test_i Testing data
+## \param test_o Class for each testing item
 def fam(train_i, train_o, test_i, test_o):
     sess = tf.Session()
     K.set_session(sess)
@@ -238,13 +246,8 @@ def fam(train_i, train_o, test_i, test_o):
     model_exporter.export(export_path, tf.constant(export_version), sess)
 
 if __name__ == '__main__':
-
     reseed()
-
     test_i, test_o = getdata(range(1), [3], process)
-
     reseed()
-
     train_i, train_o = getdata(range(5), [3], process, True)
-
     fam(train_i, train_o, test_i, test_o)
