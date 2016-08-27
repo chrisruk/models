@@ -30,8 +30,11 @@ SNRV = [[1, 0.32],
 ## List of modulation schemes to use
 MOD = ["fsk", "qam16", "qam64", "2psk","gmsk", "wbfm", "nfm"]   #"4psk", "8psk", 
 
-## Multiprocess
-## Generate training data using multiple flow graphs running simultaneously
+## \brief Generate training data using multiple flow graphs running simultaneously
+## \param sn List of SNRs
+## \param syms List of symbol rates
+## \param process Process to be called to create flow graph
+## \param train Whether we are generating training data or testing data
 def getdata(sn, syms, process, train=False):
 
     mcount = 0
@@ -97,8 +100,11 @@ def getdata(sn, syms, process, train=False):
 
     return np.array(inp), np.array(out)
 
-
-## Initialise blocks for flow graph
+## \brief Initialise blocks for flow graph
+## \param modulation Modulation scheme to use
+## \param sym List of symbol rates
+## \param sn List of SNRs
+## \param train Whether we are generating training data or testing data
 def create_blocks(self, modulation, sym, sn, train):
     self.rational_resampler_xxx_0 = filter.rational_resampler_ccc(
         interpolation=1,
