@@ -1,7 +1,5 @@
-
 ## @file
 #  Creates part of flow graph
-
 from __future__ import division, print_function, absolute_import
 from multiprocessing import Process, Queue
 import numpy as np
@@ -14,6 +12,7 @@ from gnuradio import channels
 
 ## Whether to use channel model or not
 channel_model = False
+
 ## String list of SNRs
 SNR = ["20", "15", "10", "5", "0", "-5", "-10", "-15", "-20"]
 
@@ -30,54 +29,6 @@ SNRV = [[1, 0.32],
 
 ## List of modulation schemes to use
 MOD = ["fsk", "qam16", "qam64", "2psk","gmsk", "wbfm", "nfm"]   #"4psk", "8psk", 
-
-
-"""
-## Single process
-## Generate training data using multiple flow graphs running simultaneously
-def getdata(sn, syms, process, train=False):
-
-    mcount = 0
-
-    if train:
-        inp = []
-        out = []
-    else:
-        inp = [[] for k in range(0, len(SNR))]
-        out = [[] for k in range(0, len(SNR))]
-
-    flow = [None for k in range(len(MOD))]
-
-    for m in MOD:
-
-        z = np.zeros((len(MOD),))
-        z[mcount] = 1
-
-        print("MOD ", z)
-        
-        for s in sn:
-            for sy in syms:
-
-                q = Queue()  # create a queue object
-                plist = []
-
-                p = process(train, m, s, z, q, sy, train)
-
-                job = q.get()
-
-                if train:
-                    inp += job[0]
-                    out += job[1]
-                else:
-                    for i in range(len(inp)):
-                        inp[i] += job[0][i]
-                        out[i] += job[1][i]
-
-        mcount += 1
-
-    return np.array(inp), np.array(out)
-
-"""
 
 ## Multiprocess
 ## Generate training data using multiple flow graphs running simultaneously
@@ -123,7 +74,6 @@ def getdata(sn, syms, process, train=False):
                     plist.append(p)
                     p.start()
 
-
         for p in plist:
             job = q.get()
             if train:
@@ -134,10 +84,8 @@ def getdata(sn, syms, process, train=False):
                     inp[i] += job[0][i]
                     out[i] += job[1][i]
 
-        print("waiting for join")
         for p in plist:
             p.join()
-        print("joined")
 
         mcount += 1
 
