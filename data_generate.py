@@ -58,8 +58,6 @@ def getdata(sn, syms, process, train=False):
         q = Queue()  # create a queue object
         plist = []
 
-
-
         if m == "allpsk":
         
             for md in [ "2psk","4psk","8psk" ] :            
@@ -201,7 +199,6 @@ def create_blocks(self, modulation, sym, sn, train):
         max_dev=5e3,
         fh=-1.0,
     )
-
     
     self.channels_channel_model_0 = channels.channel_model(
         noise_voltage=SNRV[sn][1],
