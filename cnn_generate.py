@@ -68,12 +68,12 @@ def loadRadio():
         for snr in data[m]:
 
             dat = data[m][snr]
-            for d in dat[:int(len(dat)/2)]:
+            for d in dat[:int(len(dat)//1.5)]:
 
                 X.append(d)
                 Y.append(z)
 
-            for d in dat[int(len(dat)/2):]:
+            for d in dat[int(len(dat)//1.5):]:
 
                 if not snr in x:
                     x[snr] = []
@@ -251,7 +251,7 @@ def cnn(train_i, train_o, test_i, test_o, mod):
     dl = 256
     """
     
-    nb_epoch = 1
+    nb_epoch = 400
 
     sess = tf.Session()
     K.set_session(sess)
