@@ -19,6 +19,7 @@ from keras.models import Sequential
 from keras.layers import Dense, Dropout, Activation, Flatten
 from keras.layers import Convolution2D
 from keras import backend as K
+from keras.callbacks import TensorBoard
 from keras.preprocessing.image import ImageDataGenerator
 from keras.regularizers import l2
 
@@ -314,8 +315,9 @@ def cnn(train_i, train_o, test_i, test_o, mod):
             test_o[0]))
     """
 
+    tb = TensorBoard(log_dir='./logs')
     model.fit(X_train, Y_train, batch_size=1024, nb_epoch=nb_epoch,
-            verbose=1,shuffle=True, validation_split=0.1)#validation_data=(np.array(test_i[18]), np.array(test_o[18])))
+            verbose=1,shuffle=True, validation_split=0.1, callbacks=[tb]) #validation_data=(np.array(test_i[18]), np.array(test_o[18])))
     
     for s in sorted(test_i):
         X_test = np.array(test_i[s])

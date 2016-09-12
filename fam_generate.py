@@ -162,7 +162,7 @@ def fam(train_i, train_o, test_i, test_o):
 
     batch_size = 60
     nb_classes = len(MOD)
-    nb_epoch = 1
+    nb_epoch = 20
 
     img_rows, img_cols = 2 * P * L, 2 * Np
     nb_filters = 96
