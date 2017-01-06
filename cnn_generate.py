@@ -253,6 +253,9 @@ def cnn(train_i, train_o, test_i, test_o,mods,snrs,train_idx,test_idx,lbl):
     nb_epoch = 400
 
     sess = tf.Session()
+
+    init_op = tf.group(tf.initialize_all_variables(), tf.initialize_local_variables())
+
     K.set_session(sess)
     K.set_learning_phase(1)
     
@@ -277,16 +280,16 @@ def cnn(train_i, train_o, test_i, test_o,mods,snrs,train_idx,test_idx,lbl):
     model = models.Sequential()
     model.add(Reshape([1]+in_shp, input_shape=in_shp))
     model.add(ZeroPadding2D((0, 2)))
-    model.add(Convolution2D(256, 1, 3, border_mode='valid', activation="relu", name="conv1", init='glorot_uniform'))
+    model.add(Convolution2D(256, 1, 3, border_mode='valid', activation="relu", init='glorot_uniform'))
     model.add(Dropout(dr))
     model.add(ZeroPadding2D((0, 2)))
-    model.add(Convolution2D(80, 2, 3, border_mode="valid", activation="relu", name="conv2", init='glorot_uniform'))
+    model.add(Convolution2D(80, 2, 3, border_mode="valid", activation="relu",  init='glorot_uniform'))
     model.add(Dropout(dr))
     model.add(Flatten())
-    model.add(Dense(256, activation='relu', init='he_normal', name="dense1"))
+    model.add(Dense(256, activation='relu', init='he_normal'))
     model.add(Dropout(dr))
-    model.add(Dense( len(classes), init='he_normal', name="dense2" ))
-    model.add(Activation('softmax'))
+    model.add(Dense( len(classes), init='he_normal' ))
+    model.add(Activation('softmax',name="out"))
     model.add(Reshape([len(classes)]))
     model.compile(loss='categorical_crossentropy', optimizer='adam')
     model.summary()
@@ -319,7 +322,7 @@ def cnn(train_i, train_o, test_i, test_o,mods,snrs,train_idx,test_idx,lbl):
             test_o[0]))
     """
     # Set up some params 
-    nb_epoch = 2  #100   # number of epochs to train on
+    nb_epoch = 2 #100   # number of epochs to train on
     batch_size = 1024  # training batch size
 
     tb = TensorBoard(log_dir='./logs')
@@ -370,17 +373,6 @@ def cnn(train_i, train_o, test_i, test_o,mods,snrs,train_idx,test_idx,lbl):
         ncor = np.sum(conf) - cor
         print ("Overall Accuracy: ", cor / (cor+ncor))
         acc[snr] = 1.0*cor/(cor+ncor)
-
-    
-
-
-
-
-
-
-
-
-
 
 
     config = model.get_config()
