@@ -27,6 +27,8 @@ doxygen models.dox
 
 # Note
 
+I'm currently in the progress of updating the CNN model generation to use https://github.com/radioML/examples/blob/master/modulation_recognition/RML2016.10a_VTCNN2_example.ipynb
+
 Please use the FAM model at the moment, I'm just tweaking the CNN model, as I need to implement 64 sample shifts.
 
 ## 12th Sept 2016

@@ -2,6 +2,7 @@
 
 ## @file
 #  CNN generate file
+# Model is now based on https://github.com/radioML/examples/blob/master/modulation_recognition/RML2016.10a_VTCNN2_example.ipynb
 
 from __future__ import division, print_function, absolute_import
 
@@ -12,12 +13,20 @@ import random
 import cPickle
 import struct
 import os
+import keras
 
 from keras.optimizers  import Adam
 from keras.constraints import MaxNorm
-from keras.models import Sequential
-from keras.layers import Dense, Dropout, Activation, Flatten
-from keras.layers import Convolution2D
+
+import keras.models as models
+from keras.layers.core import Reshape,Dense,Dropout,Activation,Flatten
+from keras.layers.noise import GaussianNoise
+from keras.layers.convolutional import Convolution2D, MaxPooling2D, ZeroPadding2D
+from keras.regularizers import *
+from keras.optimizers import adam
+
+
+from keras.layers.core import Dense, Dropout, Activation, Flatten, Reshape, Merge
 from keras import backend as K
 from keras.callbacks import TensorBoard
 from keras.preprocessing.image import ImageDataGenerator
@@ -29,9 +38,16 @@ from data_generate import *
 
 np.set_printoptions(threshold=np.nan)
 
+
+def to_onehot(yy):
+    yy1 = np.zeros([len(yy), max(yy)+1])
+    yy1[np.arange(len(yy)),yy] = 1
+    return yy1
+
 ## \brief Loads RadioML data
 def loadRadio():
 
+    """
     radioml = cPickle.load(open("2016.04C.multisnr.pkl",'rb'))
 
     data = {}
@@ -86,6 +102,35 @@ def loadRadio():
         count += 1       
 
     return X,Y,x,y,mod,data
+    """
+
+
+    # Load the dataset ...
+    #  You will need to seperately download or generate this file
+    Xd = cPickle.load(open("RML2016.10a_dict.dat",'rb'))
+    snrs,mods = map(lambda j: sorted(list(set(map(lambda x: x[j], Xd.keys())))), [1,0])
+    X = []  
+    lbl = []
+    for mod in mods:
+        for snr in snrs:
+            X.append(Xd[(mod,snr)])
+            for i in range(Xd[(mod,snr)].shape[0]):  lbl.append((mod,snr))
+    X = np.vstack(X)
+
+    # Partition the data
+    #  into training and test sets of the form we can train/test on 
+    #  while keeping SNR and Mod labels handy for each
+    np.random.seed(2016)
+    n_examples = X.shape[0]
+    n_train = n_examples * 0.5
+    train_idx = np.random.choice(range(0,n_examples), size=n_train, replace=False)
+    test_idx = list(set(range(0,n_examples))-set(train_idx))
+    X_train = X[train_idx]
+    X_test =  X[test_idx]
+    Y_train = to_onehot(map(lambda x: mods.index(lbl[x][0]), train_idx))
+    Y_test = to_onehot(map(lambda x: mods.index(lbl[x][0]), test_idx))
+
+    return X_train,Y_train,X_test,Y_test,mods,snrs
 
 
 ## Handles flow graph for CNN
@@ -238,7 +283,7 @@ def process(train, m, sn, z, qu, sym):
 ## \param test_i Testing data
 ## \param test_o Class for each testing item
 ## \param mod List of modulation schemes
-def cnn(train_i, train_o, test_i, test_o, mod):
+def cnn(train_i, train_o, test_i, test_o,mods,snrs):
     
     # CNN1
     c1 = 64
@@ -258,34 +303,42 @@ def cnn(train_i, train_o, test_i, test_o, mod):
     K.set_session(sess)
     K.set_learning_phase(1)
     
-    nb_classes = len(mod)
-
+    classes = mods
     #X_train,Y_train = shuffle_in_unison_inplace( np.array(train_i) , np.array(train_o) )
 
-    X_train = np.array(train_i)
-    Y_train = np.array(train_o)
+    X_train = train_i
+    Y_train = train_o
+    X_test = test_i
+    Y_test = test_o
 
-    model = Sequential()
-    model.add(Convolution2D(c1, 1, 3,
-                            #subsample=(1, 1),
-                            #border_mode='valid',
-                            input_shape=(1, 2, 128)))
-                            #W_regularizer = l2(.01))) #,W_constraint = MaxNorm(2)))
-    model.add(Activation('relu'))
-    model.add(Convolution2D(c2, 2, 3)) #W_regularizer = l2(.01))) #,W_constraint = MaxNorm(2)))
-    model.add(Activation('relu'))
+    in_shp = list(X_train.shape[1:])
+
+    
+    # Build VT-CNN2 Neural Net model using Keras primitives -- 
+    #  - Reshape [N,2,128] to [N,1,2,128] on input
+    #  - Pass through 2 2DConv/ReLu layers
+    #  - Pass through 2 Dense layers (ReLu and Softmax)
+    #  - Perform categorical cross entropy optimization
+
+    dr = 0.5 # dropout rate (%)
+    model = models.Sequential()
+    model.add(Reshape([1]+in_shp, input_shape=in_shp))
+    model.add(ZeroPadding2D((0, 2)))
+    model.add(Convolution2D(256, 1, 3, border_mode='valid', activation="relu", name="conv1", init='glorot_uniform'))
+    model.add(Dropout(dr))
+    model.add(ZeroPadding2D((0, 2)))
+    model.add(Convolution2D(80, 2, 3, border_mode="valid", activation="relu", name="conv2", init='glorot_uniform'))
+    model.add(Dropout(dr))
     model.add(Flatten())
-    model.add(Dense(dl))
-    model.add(Activation('relu'))
-    model.add(Dropout(1 - 0.5))
-    model.add(Dense(nb_classes))
-    model.add(Activation('softmax', name="out"))
+    model.add(Dense(256, activation='relu', init='he_normal', name="dense1"))
+    model.add(Dropout(dr))
+    model.add(Dense( len(classes), init='he_normal', name="dense2" ))
+    model.add(Activation('softmax'))
+    model.add(Reshape([len(classes)]))
+    model.compile(loss='categorical_crossentropy', optimizer='adam')
+    model.summary()
 
 
-    optimizer = Adam(lr=0.001)
-    model.compile(loss='categorical_crossentropy',
-                  optimizer=optimizer,
-                  metrics=['accuracy'])
 
     #datagen = ImageDataGenerator()
         #featurewise_center=False,
@@ -314,11 +367,40 @@ def cnn(train_i, train_o, test_i, test_o, mod):
             test_i[0],
             test_o[0]))
     """
+    # Set up some params 
+    nb_epoch = 100     # number of epochs to train on
+    batch_size = 1024  # training batch size
 
     tb = TensorBoard(log_dir='./logs')
-    model.fit(X_train, Y_train, batch_size=1024, nb_epoch=nb_epoch,
-            verbose=1,shuffle=True, validation_split=0.1, callbacks=[tb]) #validation_data=(np.array(test_i[18]), np.array(test_o[18])))
-    
+
+
+
+    # perform training ...
+    #   - call the main training loop in keras for our network+dataset
+    filepath = 'convmodrecnets_CNN2_0.5.wts.h5'
+    history = model.fit(X_train,
+        Y_train,
+        batch_size=batch_size,
+        nb_epoch=nb_epoch,
+        show_accuracy=False,
+        verbose=2,
+        validation_data=(X_test, Y_test),
+        callbacks = [
+            keras.callbacks.ModelCheckpoint(filepath, monitor='val_loss', verbose=0, save_best_only=True, mode='auto'),
+            keras.callbacks.EarlyStopping(monitor='val_loss', patience=5, verbose=0, mode='auto')
+        ])
+    # we re-load the best weights once training is finished
+    model.load_weights(filepath)
+
+   
+
+
+
+
+
+
+
+ 
     for s in sorted(test_i):
         X_test = np.array(test_i[s])
         Y_test = np.array(test_o[s])
@@ -356,6 +438,6 @@ if __name__ == '__main__':
     train_i, train_o = getdata(range(9), [3,4], process, True)
     """
 
-    train_i,train_o,test_i,test_o,mod,data = loadRadio()
+    X_train,Y_train,X_test,Y_test,mods,snrs = loadRadio()
     
-    cnn(train_i, train_o, test_i, test_o, mod)
+    cnn(X_train,Y_train,X_test,Y_test,mods,snrs)
