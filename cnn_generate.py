@@ -46,65 +46,6 @@ def to_onehot(yy):
 
 ## \brief Loads RadioML data
 def loadRadio():
-
-    """
-    radioml = cPickle.load(open("2016.04C.multisnr.pkl",'rb'))
-
-    data = {}
-    allm = []
-
-    for k in radioml.keys():
-        data[k[0]] = {}
-        allm.append(k[0])
-
-    mod = sorted(set(allm))
-
-    for m in mod:
-        dat = []
-        for k in radioml.keys():
-            if k[0] == m :
-                for sig in range(len(radioml[k])):
-                    a = np.array(radioml[k][sig][0])
-                    b = np.array(radioml[k][sig][1])
-                    if k[1] not in data[k[0]]:
-                        data[k[0]][k[1]] = []
-                    data[k[0]][k[1]].append([[a,b]])
-    
-    X = []
-    Y = []
-    x = {}
-    y = {} 
-
-    mval = {}
-    count = 0
-
-    for m in mod:
-        z = np.zeros((len(mod),))
-        z[count] = 1     
-        mval[m] = z
-        for snr in data[m]:
-
-            dat = data[m][snr]
-            for d in dat[:int(len(dat)//1.5)]:
-
-                X.append(d)
-                Y.append(z)
-
-            for d in dat[int(len(dat)//1.5):]:
-
-                if not snr in x:
-                    x[snr] = []
-                    y[snr] = []
-
-                x[snr].append(d)
-                y[snr].append(z)
-
-        count += 1       
-
-    return X,Y,x,y,mod,data
-    """
-
-
     # Load the dataset ...
     #  You will need to seperately download or generate this file
     Xd = cPickle.load(open("RML2016.10a_dict.dat",'rb'))
@@ -338,8 +279,6 @@ def cnn(train_i, train_o, test_i, test_o,mods,snrs):
     model.compile(loss='categorical_crossentropy', optimizer='adam')
     model.summary()
 
-
-
     #datagen = ImageDataGenerator()
         #featurewise_center=False,
         #featurewise_std_normalization=False,
@@ -373,8 +312,6 @@ def cnn(train_i, train_o, test_i, test_o,mods,snrs):
 
     tb = TensorBoard(log_dir='./logs')
 
-
-
     # perform training ...
     #   - call the main training loop in keras for our network+dataset
     filepath = 'convmodrecnets_CNN2_0.5.wts.h5'
@@ -392,15 +329,6 @@ def cnn(train_i, train_o, test_i, test_o,mods,snrs):
     # we re-load the best weights once training is finished
     model.load_weights(filepath)
 
-   
-
-
-
-
-
-
-
- 
     for s in sorted(test_i):
         X_test = np.array(test_i[s])
         Y_test = np.array(test_o[s])
