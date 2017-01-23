@@ -75,7 +75,7 @@ def loadRadio():
     #  while keeping SNR and Mod labels handy for each
     np.random.seed(2016)
     n_examples = X.shape[0]
-    n_train = n_examples * 0.5
+    n_train = int(n_examples * 0.5)
     train_idx = np.random.choice(range(0,n_examples), size=n_train, replace=False)
     test_idx = list(set(range(0,n_examples))-set(train_idx))
     X_train = X[train_idx]
@@ -322,7 +322,7 @@ def cnn(train_i, train_o, test_i, test_o,mods,snrs,train_idx,test_idx,lbl):
             test_o[0]))
     """
     # Set up some params 
-    nb_epoch = 2 #100   # number of epochs to train on
+    nb_epoch = 25 #100   # number of epochs to train on
     batch_size = 1024  # training batch size
 
     tb = TensorBoard(log_dir='./logs')
@@ -358,6 +358,8 @@ def cnn(train_i, train_o, test_i, test_o,mods,snrs,train_idx,test_idx,lbl):
 
         # estimate classes
         test_Y_i_hat = model.predict(test_X_i)
+        #print("PREDICT ",test_Y_i_hat)
+
         conf = np.zeros([len(classes),len(classes)])
         confnorm = np.zeros([len(classes),len(classes)])
         for i in range(0,test_X_i.shape[0]):
