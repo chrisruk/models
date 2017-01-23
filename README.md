@@ -2,7 +2,7 @@
 
 Raw CNN &amp; FAM model generation
 
-We need a TensorFlow nightly to run (as we need bundle_shim).
+# We need a TensorFlow nightly to run (as we need bundle_shim).
 
 Also you need Keras, which can be installed easily from pip.
 
